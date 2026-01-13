@@ -78,8 +78,10 @@ class ByteArrayBuilder {
       return this;
     }
     var bytes = codec.encode(string, encoder);
-    addInteger(bytes.length, bytesCount: sizeBytesCount);
-    _buffer.add(bytes);
+    if (bytes.length < 256) {
+      addInteger(bytes.length, bytesCount: sizeBytesCount);
+      _buffer.add(bytes);
+    }
     return this;
   }
 
@@ -122,10 +124,8 @@ class ByteArrayBuilder {
         if (part.isEmpty) {
           if (!jumpMissingBlocks) {
             jumpMissingBlocks = true;
-            cursor +=
-                (_kIPv6BlocksCount -
-                    ipSplit.where((p) => p.isNotEmpty).length) *
-                2;
+            final missingBlocksCount = ipSplit.where((p) => p.isNotEmpty).length;
+            cursor += (_kIPv6BlocksCount - missingBlocksCount) * 2;
           }
           continue;
         }
