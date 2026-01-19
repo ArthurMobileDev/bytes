@@ -39,14 +39,14 @@ class ByteArrayBuilder {
     final buffer = ByteData(Bytes.int64ByteCount);
     buffer.setUint64(0, value, Endian.big);
     return buffer.buffer.asUint8List().sublist(
-      Bytes.int64ByteCount - bytesCount,
-    );
+          Bytes.int64ByteCount - bytesCount,
+        );
   }
 
   Uint8List _intToBytes(int value, int bytesCount) {
     return switch (bytesCount) {
       > Bytes.int64ByteCount || < 0 => Uint8List(0),
-      Bytes.int8ByteCount => Uint8List(1)..[0] = value & 0xFF,
+      Bytes.int8ByteCount => Uint8List(1)..[0] = value,
       Bytes.int16ByteCount => _uint16ToBytes(value),
       Bytes.int32ByteCount => _uint32ToBytes(value),
       Bytes.int64ByteCount => _uint64ToBytes(value),
@@ -112,9 +112,8 @@ class ByteArrayBuilder {
       return this;
     }
     var bytes = codec.encode(string, encoder);
-    final maxSize = sizeBytesCount > 1
-        ? 1 << (Bytes.byteBitCount * sizeBytesCount)
-        : 256;
+    final maxSize =
+        sizeBytesCount > 1 ? 1 << (Bytes.byteBitCount * sizeBytesCount) : 256;
     if (bytes.length < maxSize) {
       addInteger(bytes.length, bytesCount: sizeBytesCount);
       _buffer.add(bytes);
@@ -128,7 +127,6 @@ class ByteArrayBuilder {
     bool asHexString = false,
     Encoding encoder = utf8,
   }) {
-
     var digest = string.toMd5(encoder);
     Uint8List md5Bytes = asHexString
         ? codec.encode(digest.toString().toUpperCase(), encoder)
@@ -136,7 +134,6 @@ class ByteArrayBuilder {
     if (withSize) addInteger(md5Bytes.length, bytesCount: 1);
     _buffer.add(md5Bytes);
     return this;
-
   }
 
   ByteArrayBuilder addMacAddress(String macAddress) {

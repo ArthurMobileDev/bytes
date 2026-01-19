@@ -72,8 +72,7 @@ class ByteArrayReader {
   int? readInteger(int bytesCount) {
     if (bytesCount > Bytes.int64ByteCount ||
         bytesCount < 1 ||
-        _insufficientSize(bytesCount))
-      return null;
+        _insufficientSize(bytesCount)) return null;
     return _bytesToInt(readBytes(bytesCount));
   }
 
