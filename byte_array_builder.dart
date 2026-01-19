@@ -122,13 +122,22 @@ class ByteArrayBuilder {
     return this;
   }
 
-  // ByteArrayBuilder addMD5(String string,
-  //     {bool hasCount = true, Encoding encoder = utf8}) {
-  //   if (string.isEmpty) return this;
-  //   var strMd5 = md5.convert(string.codeUnits).toString().toUpperCase();
-  //   return addString(
-  //       strMd5, sizeBytesCount: hasCount ? 1 : 0, encoder: encoder);
-  // }
+  ByteArrayBuilder addMD5(
+    String string, {
+    bool withSize = true,
+    bool asHexString = false,
+    Encoding encoder = utf8,
+  }) {
+
+    var digest = string.toMd5(encoder);
+    Uint8List md5Bytes = asHexString
+        ? codec.encode(digest.toString().toUpperCase(), encoder)
+        : Uint8List.fromList(digest.bytes);
+    if (withSize) addInteger(md5Bytes.length, bytesCount: 1);
+    _buffer.add(md5Bytes);
+    return this;
+
+  }
 
   ByteArrayBuilder addMacAddress(String macAddress) {
     final strMac = macAddress.replaceAll(":", "").replaceAll("-", "");

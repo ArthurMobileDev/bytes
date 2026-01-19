@@ -1,8 +1,13 @@
+import 'dart:convert';
 import 'dart:typed_data';
+
+import 'package:crypto/crypto.dart';
+
+import 'string_codec.dart';
 
 const byteBitCount = 8;
 
-const int8ByteCount  = 1;
+const int8ByteCount = 1;
 const int16ByteCount = 2;
 const int24ByteCount = 3;
 const int32ByteCount = 4;
@@ -10,13 +15,13 @@ const int64ByteCount = 8;
 
 const doubleInt16Dec8ByteCount = int16ByteCount + int8ByteCount;
 
-const macByteCount  = 6;
+const macByteCount = 6;
 const ipv4ByteCount = 4;
 const dateByteCount = 3;
 const timeByteCount = 3;
 
 const hexDecimalBase = 16;
-const decimalBase    = 10;
+const decimalBase = 10;
 
 extension UtilsByteListExtension on Uint8List {
   String toHexString({String joinSeparator = ""}) {
@@ -36,4 +41,9 @@ extension UtilsIntegerExtension on int {
     }
     return buffer;
   }
+}
+
+extension UtilsStringExtension on String {
+  Digest toMd5([Encoding encoder = utf8]) =>
+      md5.convert(codec.encode(this, encoder));
 }
