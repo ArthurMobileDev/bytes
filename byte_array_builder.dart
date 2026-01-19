@@ -39,7 +39,9 @@ class ByteArrayBuilder {
   Uint8List _genericUintToBytes(int value, int bytesCount) {
     final buffer = ByteData(Bytes.int64ByteCount);
     buffer.setUint64(0, value, Endian.big);
-    return buffer.buffer.asUint8List().sublist(Bytes.int64ByteCount - bytesCount);
+    return buffer.buffer.asUint8List().sublist(
+      Bytes.int64ByteCount - bytesCount,
+    );
   }
 
   Uint8List _intToBytes(int value, int bytesCount) {
@@ -132,23 +134,23 @@ class ByteArrayBuilder {
   ByteArrayBuilder addMacAddress(String macAddress) {
     final strMac = macAddress.replaceAll(":", "").replaceAll("-", "");
     if (strMac.length < Bytes.macByteCount * 2) return this;
-    try {
-      int macNumber = int.parse(strMac, radix: Bytes.hexDecimalBase);
+    int? macNumber = int.tryParse(strMac, radix: Bytes.hexDecimalBase);
+    if (macNumber != null) {
       _buffer.add(_genericUintToBytes(macNumber, Bytes.macByteCount));
-    } catch (_) {}
+    }
     return this;
   }
 
   ByteArrayBuilder addIPv4Address(String ipAddress) {
     final ipSplit = ipAddress.split(".");
     if (ipSplit.length != Bytes.ipv4ByteCount) return this;
-    try {
-      final tempBuffer = Uint8List(Bytes.ipv4ByteCount);
-      for (int i = 0; i < ipSplit.length; i++) {
-        tempBuffer[i] = int.parse(ipSplit[i], radix: Bytes.decimalBase);
-      }
-      _buffer.add(tempBuffer);
-    } catch (_) {}
+    final tempBuffer = Uint8List(Bytes.ipv4ByteCount);
+    for (int i = 0; i < ipSplit.length; i++) {
+      final part = int.tryParse(ipSplit[i], radix: Bytes.decimalBase);
+      if (part == null || part < 0 || part > 255) return this;
+      tempBuffer[i] = part;
+    }
+    _buffer.add(tempBuffer);
     return this;
   }
 
@@ -186,5 +188,6 @@ class ByteArrayBuilder {
   }
 
   void clear() => _buffer.clear();
+
   Uint8List build() => _buffer.toBytes();
 }

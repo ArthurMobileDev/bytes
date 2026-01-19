@@ -249,7 +249,7 @@ void testByteArrayReader() {
   assert(reader.readIPv4Address() == "192.168.0.64");
   assert(reader.readMacAddress() == "FF-55-31-00-12-1F");
   assert(reader.readMacAddress() != "ff-55-31-00-12-1f");
-  assert(reader.readMacAddress(divider: ":") == "FF:55:31:00:12:1F");
+  assert(reader.readMacAddress(joinSeparator: ":") == "FF:55:31:00:12:1F");
 
   //read Date and Time
   reader = Uint8List.fromList([24, 10, 24, 10, 57, 23, 29, 02, 28, 23, 34, 59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).reader;
