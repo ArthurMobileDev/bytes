@@ -1,9 +1,8 @@
-import 'dart:math';
 import 'dart:typed_data';
 
 //import 'package:crypto/crypto.dart';
 
-import 'bytes_utils.dart';
+import 'bytes_utils.dart' as Bytes;
 import 'string_codec.dart';
 
 export 'string_codec.dart' show Encoding;
@@ -20,36 +19,36 @@ class ByteArrayBuilder {
   int get length => _buffer.length;
 
   Uint8List _uint16ToBytes(int value) {
-    final buffer = ByteData(kInt16ByteCount);
+    final buffer = ByteData(Bytes.int16ByteCount);
     buffer.setUint16(0, value, Endian.big);
     return buffer.buffer.asUint8List();
   }
 
   Uint8List _uint32ToBytes(int value) {
-    final buffer = ByteData(kInt32ByteCount);
+    final buffer = ByteData(Bytes.int32ByteCount);
     buffer.setUint32(0, value, Endian.big);
     return buffer.buffer.asUint8List();
   }
 
   Uint8List _uint64ToBytes(int value) {
-    final buffer = ByteData(kInt64ByteCount);
+    final buffer = ByteData(Bytes.int64ByteCount);
     buffer.setUint64(0, value, Endian.big);
     return buffer.buffer.asUint8List();
   }
 
   Uint8List _genericUintToBytes(int value, int bytesCount) {
-    final buffer = ByteData(kInt64ByteCount);
+    final buffer = ByteData(Bytes.int64ByteCount);
     buffer.setUint64(0, value, Endian.big);
-    return buffer.buffer.asUint8List().sublist(kInt64ByteCount - bytesCount);
+    return buffer.buffer.asUint8List().sublist(Bytes.int64ByteCount - bytesCount);
   }
 
   Uint8List _intToBytes(int value, int bytesCount) {
     return switch (bytesCount) {
-      > kInt64ByteCount || < 0 => Uint8List(0),
-      kInt8ByteCount => Uint8List(1)..[0] = value & 0xFF,
-      kInt16ByteCount => _uint16ToBytes(value),
-      kInt32ByteCount => _uint32ToBytes(value),
-      kInt64ByteCount => _uint64ToBytes(value),
+      > Bytes.int64ByteCount || < 0 => Uint8List(0),
+      Bytes.int8ByteCount => Uint8List(1)..[0] = value & 0xFF,
+      Bytes.int16ByteCount => _uint16ToBytes(value),
+      Bytes.int32ByteCount => _uint32ToBytes(value),
+      Bytes.int64ByteCount => _uint64ToBytes(value),
       _ => _genericUintToBytes(value, bytesCount),
     };
   }
@@ -95,9 +94,9 @@ class ByteArrayBuilder {
   }
 
   ByteArrayBuilder addDouble(double value) {
-    final data = ByteData(kDoubleInt16Dec8ByteCount);
+    final data = ByteData(Bytes.doubleInt16Dec8ByteCount);
     data.setUint16(0, value.truncate(), Endian.big);
-    data.setUint8(kInt16ByteCount, (value % 1 * 100).round());
+    data.setUint8(Bytes.int16ByteCount, (value % 1 * 100).round());
     _buffer.add(data.buffer.asUint8List());
     return this;
   }
@@ -113,7 +112,7 @@ class ByteArrayBuilder {
     }
     var bytes = codec.encode(string, encoder);
     final maxSize = sizeBytesCount > 1
-        ? pow(2, kByteBitCount * sizeBytesCount)
+        ? 1 << (Bytes.byteBitCount * sizeBytesCount)
         : 256;
     if (bytes.length < maxSize) {
       addInteger(bytes.length, bytesCount: sizeBytesCount);
@@ -132,21 +131,21 @@ class ByteArrayBuilder {
 
   ByteArrayBuilder addMacAddress(String macAddress) {
     final strMac = macAddress.replaceAll(":", "").replaceAll("-", "");
-    if (strMac.length < kMacByteCount * 2) return this;
+    if (strMac.length < Bytes.macByteCount * 2) return this;
     try {
-      int macNumber = int.parse(strMac, radix: hexDecimalBase);
-      _buffer.add(_genericUintToBytes(macNumber, kMacByteCount));
+      int macNumber = int.parse(strMac, radix: Bytes.hexDecimalBase);
+      _buffer.add(_genericUintToBytes(macNumber, Bytes.macByteCount));
     } catch (_) {}
     return this;
   }
 
   ByteArrayBuilder addIPv4Address(String ipAddress) {
     final ipSplit = ipAddress.split(".");
-    if (ipSplit.length != kIPv4ByteCount) return this;
+    if (ipSplit.length != Bytes.ipv4ByteCount) return this;
     try {
-      final tempBuffer = Uint8List(kIPv4ByteCount);
+      final tempBuffer = Uint8List(Bytes.ipv4ByteCount);
       for (int i = 0; i < ipSplit.length; i++) {
-        tempBuffer[i] = int.parse(ipSplit[i], radix: decimalBase);
+        tempBuffer[i] = int.parse(ipSplit[i], radix: Bytes.decimalBase);
       }
       _buffer.add(tempBuffer);
     } catch (_) {}
@@ -154,7 +153,7 @@ class ByteArrayBuilder {
   }
 
   ByteArrayBuilder addDate(DateTime? dateTime) {
-    Uint8List tempBuffer = Uint8List(kDateByteCount);
+    Uint8List tempBuffer = Uint8List(Bytes.dateByteCount);
     if (dateTime != null && dateTime.year >= 2000) {
       tempBuffer[0] = dateTime.day;
       tempBuffer[1] = dateTime.month;
@@ -165,7 +164,7 @@ class ByteArrayBuilder {
   }
 
   ByteArrayBuilder addTime(DateTime? dateTime) {
-    Uint8List tempBuffer = Uint8List(kDateByteCount);
+    Uint8List tempBuffer = Uint8List(Bytes.dateByteCount);
     if (dateTime != null) {
       tempBuffer[0] = dateTime.hour;
       tempBuffer[1] = dateTime.minute;
