@@ -95,6 +95,19 @@ class ByteArrayReader {
     return bytes != null ? codec.decode(bytes, decoder) : null;
   }
 
+  String? readHexString(
+      {int? size,
+      int sizeBytesCount = 1,
+      Encoding decoder = utf8,
+      String joinSeparator = ""}) {
+    size ??= readInteger(sizeBytesCount);
+    if (size == null || _insufficientSize(size)) return null;
+    final bytes = readBytes(size);
+    return bytes != null
+        ? bytes.toHexString(joinSeparator: joinSeparator)
+        : null;
+  }
+
   String? readHexByteString() {
     final byte = readByte();
     if (byte == null) return null;
