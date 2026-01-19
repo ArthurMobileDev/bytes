@@ -1,11 +1,10 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 //import 'package:crypto/crypto.dart';
 
 import 'bytes_utils.dart' as Bytes;
 import 'string_codec.dart';
-
-export 'string_codec.dart' show Encoding;
 
 class ByteArrayBuilder {
   final _buffer = BytesBuilder();
@@ -106,7 +105,7 @@ class ByteArrayBuilder {
   ByteArrayBuilder addString(
     String? string, {
     int sizeBytesCount = 1,
-    Encoding encoder = Encoding.utf8,
+    Encoding encoder = utf8,
   }) {
     if (string == null || string.isEmpty) {
       addInteger(0, bytesCount: sizeBytesCount);
@@ -124,7 +123,7 @@ class ByteArrayBuilder {
   }
 
   // ByteArrayBuilder addMD5(String string,
-  //     {bool hasCount = true, Encoding encoder = Encoding.utf8}) {
+  //     {bool hasCount = true, Encoding encoder = utf8}) {
   //   if (string.isEmpty) return this;
   //   var strMd5 = md5.convert(string.codeUnits).toString().toUpperCase();
   //   return addString(

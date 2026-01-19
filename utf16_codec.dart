@@ -3,16 +3,19 @@ import 'dart:typed_data';
 
 const utf16 = Utf16Codec();
 
-class Utf16Codec extends Codec<String, Uint8List>
+class Utf16Codec extends Encoding
 {
   final Endian endian;
   const Utf16Codec([this.endian = Endian.big]);
 
   @override
-  Converter<Uint8List, String> get decoder => _Utf16Decoder(endian);
+  Converter<List<int>, String> get decoder => _Utf16Decoder(endian);
 
   @override
-  Converter<String, Uint8List> get encoder => _Utf16Encoder(endian);
+  Converter<String, List<int>> get encoder => _Utf16Encoder(endian);
+
+  @override
+  String get name => 'utf-16';
 }
 
 class _Utf16Encoder extends Converter<String, Uint8List>

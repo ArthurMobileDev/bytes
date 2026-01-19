@@ -1,9 +1,8 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'bytes_utils.dart' as Bytes;
 import 'string_codec.dart';
-
-export 'string_codec.dart' show Encoding;
 
 class ByteArrayReader {
   final Uint8List _data;
@@ -89,7 +88,7 @@ class ByteArrayReader {
   String? readString({
     int? size,
     int sizeBytesCount = 1,
-    Encoding decoder = Encoding.utf8,
+    Encoding decoder = utf8,
   }) {
     size ??= readInteger(sizeBytesCount);
     if (size == null || _insufficientSize(size)) return null;

@@ -1,29 +1,25 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'utf16_codec.dart';
-
-enum Encoding {latin1, ascii, utf8, utf16}
-const StringCodec codec = _StringCodecReplace(); //TODO: colocar no GetIt
+const StringCodec codec = _StringCodecReplace();
 
 abstract class StringCodec {
-  Uint8List encode(String string, [Encoding encoder = Encoding.utf8]);
-  String decode(Uint8List bytes, [Encoding decoder = Encoding.utf8]);
+
+  factory StringCodec([bool replace = true]) =>
+      replace ? const _StringCodecReplace() : const _StringCodecFallback();
+
+  Uint8List encode(String string, [Encoding encoder = utf8]);
+
+  String decode(Uint8List bytes, [Encoding decoder = utf8]);
 }
 
-class _StringCodecFallback implements StringCodec{
-
+class _StringCodecFallback implements StringCodec {
   const _StringCodecFallback();
 
   @override
-  Uint8List encode(String string, [Encoding encoder = Encoding.utf8]) {
+  Uint8List encode(String string, [Encoding encoder = utf8]) {
     try {
-      return switch(encoder) {
-        Encoding.utf8 => utf8.encode(string),
-        Encoding.ascii => ascii.encode(string),
-        Encoding.latin1 => latin1.encode(string),
-        Encoding.utf16 => utf16.encode(string),
-      };
+      return encoder.encode(string) as Uint8List;
     } catch (_) {
       //Fallback for the invalid chars
       return utf8.encode(string);
@@ -31,20 +27,17 @@ class _StringCodecFallback implements StringCodec{
   }
 
   @override
-  String decode(Uint8List bytes, [Encoding decoder = Encoding.utf8]) {
-    //Replace invalid chars
-    return switch(decoder) {
-      Encoding.utf8 => utf8.decode(bytes, allowMalformed: true),
-      Encoding.ascii => ascii.decode(bytes, allowInvalid: true),
-      Encoding.latin1 => latin1.decode(bytes, allowInvalid: true),
-      Encoding.utf16 => utf16.decode(bytes),
+  String decode(Uint8List bytes, [Encoding decoder = utf8]) {
+    return switch (decoder) {
+      Utf8Codec() => decoder.decode(bytes, allowMalformed: true),
+      AsciiCodec() => decoder.decode(bytes, allowInvalid: true),
+      Latin1Codec() => latin1.decode(bytes, allowInvalid: true),
+      _ => decoder.decode(bytes),
     };
   }
 }
 
-
-class _StringCodecReplace implements StringCodec{
-
+class _StringCodecReplace implements StringCodec {
   static const int nullChar = 0x1F;
   static const int asciiValidChar = 0x7F;
   static const int latin1ValidChar = 0xFF;
@@ -52,37 +45,29 @@ class _StringCodecReplace implements StringCodec{
   const _StringCodecReplace();
 
   @override
-  String decode(Uint8List bytes, [Encoding decoder = Encoding.utf8]) {
-    return switch(decoder) {
-      Encoding.utf8 => utf8.decode(bytes, allowMalformed: true),
-      Encoding.ascii => ascii.decode(bytes, allowInvalid: true),
-      Encoding.latin1 => latin1.decode(bytes, allowInvalid: true),
-      Encoding.utf16 => utf16.decode(bytes),
+  String decode(Uint8List bytes, [Encoding decoder = utf8]) {
+    return switch (decoder) {
+      Utf8Codec() => decoder.decode(bytes, allowMalformed: true),
+      AsciiCodec() => decoder.decode(bytes, allowInvalid: true),
+      Latin1Codec() => latin1.decode(bytes, allowInvalid: true),
+      _ => decoder.decode(bytes),
     };
   }
 
   @override
-  Uint8List encode(String string, [Encoding encoder = Encoding.utf8]) {
-    return switch(encoder) {
-      Encoding.utf8 => utf8.encode(string),
-      Encoding.ascii => ascii.encode(_replaceInvalidAsciiChars(string)),
-      Encoding.latin1 => latin1.encode(_replaceInvalidLatin1Chars(string)),
-      Encoding.utf16 => utf16.encode(string),
-    };
+  Uint8List encode(String string, [Encoding encoder = utf8]) {
+    if (encoder is AsciiCodec)
+      string = _replaceInvalidChars(string, asciiValidChar);
+    else if (encoder is Latin1Codec)
+      string = _replaceInvalidChars(string, latin1ValidChar);
+    return encoder.encode(string) as Uint8List;
   }
 
-  String _replaceInvalidAsciiChars(String string)
-  {
-    return String.fromCharCodes(
-      string.codeUnits.map((char) => char <= asciiValidChar ? char : nullChar)
-    );
-  }
-
-  String _replaceInvalidLatin1Chars(String string)
-  {
-    return String.fromCharCodes(
-        string.codeUnits.map((char) => char <= latin1ValidChar ? char : nullChar)
-    );
+  String _replaceInvalidChars(String string, int validCharLimit) {
+    final codes = Uint16List.fromList(string.codeUnits);
+    for (var i = 0; i < codes.length; i++) {
+      if (codes[i] > validCharLimit) codes[i] = nullChar;
+    }
+    return String.fromCharCodes(codes);
   }
 }
-
