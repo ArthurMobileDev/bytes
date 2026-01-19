@@ -162,21 +162,6 @@ void testByteArrayBuilder() {
   builder.clear();
   assert(compareList(builder.build(), []));
 
-  builder.addIPv6Address("::2001:fc6:a0:1");
-  assert(compareList(builder.build(), [0,0, 0,0, 0,0, 0,0, 0x20, 1, 0xf, 0xc6, 0, 0xa0, 0x0, 1]));
-
-  builder.clear();
-  assert(compareList(builder.build(), []));
-
-  builder.addIPv6Address("2001:fc6::a0:1");
-  assert(compareList(builder.build(), [0x20, 1, 0xf, 0xc6, 0,0, 0,0, 0,0, 0,0, 0, 0xa0, 0x0, 1]));
-
-  builder.clear();
-  assert(compareList(builder.build(), []));
-
-  builder.addIPv6Address("2001:fc6:a0:1::");
-  assert(compareList(builder.build(), [0x20, 1, 0xf, 0xc6, 0, 0xa0, 0x0, 1, 0,0, 0,0, 0,0, 0,0]));
-
   // add Date e Time
   builder.clear();
   assert(compareList(builder.build(), []));
@@ -265,11 +250,6 @@ void testByteArrayReader() {
   assert(reader.readMacAddress() == "FF-55-31-00-12-1F");
   assert(reader.readMacAddress() != "ff-55-31-00-12-1f");
   assert(reader.readMacAddress(divider: ":") == "FF:55:31:00:12:1F");
-  reader = Uint8List.fromList([0,0, 0,0, 0,0, 0,0, 0x20, 1, 0xf, 0xc6, 0, 0xa0, 0x0, 1, 0x20, 1, 0xf, 0xc6, 0,0, 0,0, 0,0, 0,0, 0, 0xa0, 0x0, 1, 0x20, 1, 0xf, 0xc6, 0, 0xa0, 0x0, 1, 0,0, 0,0, 0,0, 0,0, 0x20, 1, 0xf, 0xc6, 0, 0xa0, 0x0, 1, 0,0, 0,0, 0,0, 0,0]).reader;
-  assert(reader.readIPv6Address() == "::2001:FC6:A0:1");
-  assert(reader.readIPv6Address() == "2001:FC6::A0:1");
-  assert(reader.readIPv6Address() == "2001:FC6:A0:1::");
-  assert(reader.readIPv6Address(collapseZeros: false) == "2001:FC6:A0:1:0:0:0:0");
 
   //read Date and Time
   reader = Uint8List.fromList([24, 10, 24, 10, 57, 23, 29, 02, 28, 23, 34, 59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).reader;
@@ -298,15 +278,8 @@ void testByteArrayReader() {
 void testUtils() {
 
   final number = 0x0A517F42;
-  final bytes = Uint8List.fromList([0x0A, 0x51, 0x7F, 0x42]);
   final bits = [false, false, false, false, true, false, true, false, false, true, false, true, false, false, false, true, false, true, true, true, true, true, true, true, false, true, false, false, false, false, true, false];
 
-  // Integer to Bytes & Bytes to Integer
-  assert(compareList(number.toBytes(4), bytes));
-  assert(compareList(number.toBytes(3), bytes.sublist(1)));
-  assert(!compareList(number.toBytes(5), bytes));
-  assert(number == bytes.toInt());
-  
   // Integer to Bits
   assert(compareList(number.toBits(), bits.sublist(24)));
   assert(compareList(number.toBits(bytesCount: 1), bits.sublist(24)));

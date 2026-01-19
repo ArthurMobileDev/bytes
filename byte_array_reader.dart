@@ -14,6 +14,15 @@ class ByteArrayReader {
 
   bool _verifySize(int bytesCount) => _data.length < _cursor + bytesCount;
 
+  int? _bytesToInt(Uint8List? bytes) {
+    if (bytes == null) return null;
+    int result = 0;
+    for (int byte in bytes) {
+      result = (result << kByteBitCount) | byte;
+    }
+    return result;
+  }
+
   bool? readBoolean() {
     if (_verifySize(kInt8ByteCount)) return null;
     final value = _buffer.getUint8(_cursor) != 0;
@@ -44,7 +53,7 @@ class ByteArrayReader {
 
   int? read24Int() {
     if (_verifySize(kInt24ByteCount)) return null;
-    return readBytes(kInt24ByteCount)?.toInt();
+    return _bytesToInt(readBytes(kInt24ByteCount));
   }
 
   int? read32Int() {
@@ -66,7 +75,7 @@ class ByteArrayReader {
         bytesCount < 1 ||
         _verifySize(bytesCount))
       return null;
-    return readBytes(bytesCount)?.toInt();
+    return _bytesToInt(readBytes(bytesCount));
   }
 
   double? readDouble() {
@@ -95,7 +104,7 @@ class ByteArrayReader {
     if (_verifySize(kInt8ByteCount)) return null;
     final value = _buffer
         .getUint8(_cursor)
-        .toRadixString(hexDecimal)
+        .toRadixString(hexDecimalBase)
         .padLeft(2, '0');
     _cursor += kInt8ByteCount;
     return value.toUpperCase();
@@ -116,29 +125,6 @@ class ByteArrayReader {
       value.write(byte.toString());
     }
     return value.toString();
-  }
-
-  String? readIPv6Address({bool collapseZeros = true}) {
-    if (_verifySize(kIPv6ByteCount)) return null;
-    final value = StringBuffer();
-    for (int i = 0; i < kIPv6ByteCount; i += 2) {
-      final block = _buffer.getUint16(_cursor);
-      _cursor += kInt16ByteCount;
-      if (block == 0 && collapseZeros) {
-        if (i + 2 >= kIPv6ByteCount) {
-          collapseZeros = false;
-          value.write("::");
-        } else if (_buffer.getUint16(_cursor) != 0) {
-          collapseZeros = false;
-          value.write(":");
-        }
-        continue;
-      }
-
-      if (value.isNotEmpty) value.write(":");
-      value.write(block.toRadixString(hexDecimal));
-    }
-    return value.toString().toUpperCase();
   }
 
   DateTime? readDate() {
@@ -175,32 +161,20 @@ class ByteArrayReader {
     );
   }
 
-  bool testByte(int byte) {
-    final value = readByte();
-    if (value == null) return false;
-    return (byte & 0xff) == value;
-  }
+  bool testByte(int byte) => readByte() == (byte & 0xff);
 
   void jump(int count) => _cursor += count;
 
-  Uint8List get data => _data;
+  bool get notEnd => _data.length > _cursor;
 
-  Uint8List? get remaining =>
-      _data.length >= _cursor ? Uint8List.sublistView(_data, _cursor) : null;
+  Uint8List get data => _data;
 
   int get remainingCount => _data.length - _cursor;
 
-  bool get notEnd => _data.length > _cursor;
+  Uint8List? get remaining =>
+      _data.length >= _cursor ? Uint8List.sublistView(_data, _cursor) : null;
 }
 
 extension UtilsByteArrayExtension on Uint8List {
-  int? toInt() {
-    int result = 0;
-    for (int byte in this) {
-      result = (result << kByteBitCount) | byte;
-    }
-    return result;
-  }
-
   ByteArrayReader get reader => ByteArrayReader(this);
 }

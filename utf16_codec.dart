@@ -32,7 +32,6 @@ class _Utf16Encoder extends Converter<String, Uint8List>
 class _Utf16Decoder extends Converter<Uint8List, String>
 {
   final Endian endian;
-
   _Utf16Decoder(this.endian);
 
   @override

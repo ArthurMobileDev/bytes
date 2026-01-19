@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:typed_data';
 
 //import 'package:crypto/crypto.dart';
@@ -7,12 +8,51 @@ import 'string_codec.dart';
 
 export 'string_codec.dart' show Encoding;
 
-const _kIPv6BlocksCount = 8;
-
 class ByteArrayBuilder {
   final _buffer = BytesBuilder();
 
+  ByteArrayBuilder();
+
+  ByteArrayBuilder.fromArray(Uint8List array) {
+    _buffer.add(array);
+  }
+
   int get length => _buffer.length;
+
+  Uint8List _uint16ToBytes(int value) {
+    final buffer = ByteData(kInt16ByteCount);
+    buffer.setUint16(0, value, Endian.big);
+    return buffer.buffer.asUint8List();
+  }
+
+  Uint8List _uint32ToBytes(int value) {
+    final buffer = ByteData(kInt32ByteCount);
+    buffer.setUint32(0, value, Endian.big);
+    return buffer.buffer.asUint8List();
+  }
+
+  Uint8List _uint64ToBytes(int value) {
+    final buffer = ByteData(kInt64ByteCount);
+    buffer.setUint64(0, value, Endian.big);
+    return buffer.buffer.asUint8List();
+  }
+
+  Uint8List _genericUintToBytes(int value, int bytesCount) {
+    final buffer = ByteData(kInt64ByteCount);
+    buffer.setUint64(0, value, Endian.big);
+    return buffer.buffer.asUint8List().sublist(kInt64ByteCount - bytesCount);
+  }
+
+  Uint8List _intToBytes(int value, int bytesCount) {
+    return switch (bytesCount) {
+      > kInt64ByteCount || < 0 => Uint8List(0),
+      kInt8ByteCount => Uint8List(1)..[0] = value & 0xFF,
+      kInt16ByteCount => _uint16ToBytes(value),
+      kInt32ByteCount => _uint32ToBytes(value),
+      kInt64ByteCount => _uint64ToBytes(value),
+      _ => _genericUintToBytes(value, bytesCount),
+    };
+  }
 
   ByteArrayBuilder addBoolean(bool boolean) {
     _buffer.addByte(boolean ? 1 : 0);
@@ -30,33 +70,27 @@ class ByteArrayBuilder {
   }
 
   ByteArrayBuilder add16Int(int short) {
-    final data = ByteData(kInt16ByteCount);
-    data.setInt16(0, short, Endian.big);
-    _buffer.add(data.buffer.asUint8List());
+    _buffer.add(_uint16ToBytes(short));
     return this;
   }
 
   ByteArrayBuilder add24Int(int integer) {
-    _buffer.add(integer.toBytes(3));
+    _buffer.add(_genericUintToBytes(integer, 3));
     return this;
   }
 
   ByteArrayBuilder add32Int(int integer) {
-    final data = ByteData(kInt32ByteCount);
-    data.setInt32(0, integer, Endian.big);
-    _buffer.add(data.buffer.asUint8List());
+    _buffer.add(_uint32ToBytes(integer));
     return this;
   }
 
   ByteArrayBuilder add64Int(int integer) {
-    final data = ByteData(kInt64ByteCount);
-    data.setInt64(0, integer, Endian.big);
-    _buffer.add(data.buffer.asUint8List());
+    _buffer.add(_uint64ToBytes(integer));
     return this;
   }
 
   ByteArrayBuilder addInteger(int integer, {required int bytesCount}) {
-    _buffer.add(integer.toBytes(bytesCount));
+    _buffer.add(_intToBytes(integer, bytesCount));
     return this;
   }
 
@@ -78,25 +112,30 @@ class ByteArrayBuilder {
       return this;
     }
     var bytes = codec.encode(string, encoder);
-    if (bytes.length < 256) {
+    final maxSize = sizeBytesCount > 1
+        ? pow(2, kByteBitCount * sizeBytesCount)
+        : 256;
+    if (bytes.length < maxSize) {
       addInteger(bytes.length, bytesCount: sizeBytesCount);
       _buffer.add(bytes);
     }
     return this;
   }
 
-  // ByteArrayBuilder addMD5(String string, {bool hasCount = true, Encoding encoder = Encoding.utf8}) {
+  // ByteArrayBuilder addMD5(String string,
+  //     {bool hasCount = true, Encoding encoder = Encoding.utf8}) {
   //   if (string.isEmpty) return this;
   //   var strMd5 = md5.convert(string.codeUnits).toString().toUpperCase();
-  //   return addString(strMd5, sizeBytesCount: hasCount? 1 : 0, encoder: encoder);
+  //   return addString(
+  //       strMd5, sizeBytesCount: hasCount ? 1 : 0, encoder: encoder);
   // }
 
   ByteArrayBuilder addMacAddress(String macAddress) {
     final strMac = macAddress.replaceAll(":", "").replaceAll("-", "");
-    if (strMac.length < kMacByteCount) return this;
+    if (strMac.length < kMacByteCount * 2) return this;
     try {
-      int macNumber = int.parse(strMac, radix: hexDecimal);
-      _buffer.add(macNumber.toBytes(kMacByteCount));
+      int macNumber = int.parse(strMac, radix: hexDecimalBase);
+      _buffer.add(_genericUintToBytes(macNumber, kMacByteCount));
     } catch (_) {}
     return this;
   }
@@ -107,56 +146,32 @@ class ByteArrayBuilder {
     try {
       final tempBuffer = Uint8List(kIPv4ByteCount);
       for (int i = 0; i < ipSplit.length; i++) {
-        tempBuffer[i] = int.parse(ipSplit[i]);
+        tempBuffer[i] = int.parse(ipSplit[i], radix: decimalBase);
       }
       _buffer.add(tempBuffer);
     } catch (_) {}
     return this;
   }
 
-  ByteArrayBuilder addIPv6Address(String ipAddress) {
-    final ipSplit = ipAddress.split(":");
-    try {
-      var cursor = 0;
-      bool jumpMissingBlocks = false;
-      final tempBuffer = ByteData(kIPv6ByteCount);
-      for (final part in ipSplit) {
-        if (part.isEmpty) {
-          if (!jumpMissingBlocks) {
-            jumpMissingBlocks = true;
-            final missingBlocksCount = ipSplit.where((p) => p.isNotEmpty).length;
-            cursor += (_kIPv6BlocksCount - missingBlocksCount) * 2;
-          }
-          continue;
-        }
-
-        tempBuffer.setUint16(
-          cursor,
-          int.parse(part, radix: hexDecimal),
-          Endian.big,
-        );
-        cursor += kInt16ByteCount;
-      }
-      _buffer.add(tempBuffer.buffer.asUint8List());
-    } catch (_) {}
-    return this;
-  }
-
   ByteArrayBuilder addDate(DateTime? dateTime) {
-    _buffer.add(
-      dateTime != null && dateTime.year >= 2000
-          ? [dateTime.day, dateTime.month, dateTime.year - 2000]
-          : [0, 0, 0],
-    );
+    Uint8List tempBuffer = Uint8List(kDateByteCount);
+    if (dateTime != null && dateTime.year >= 2000) {
+      tempBuffer[0] = dateTime.day;
+      tempBuffer[1] = dateTime.month;
+      tempBuffer[2] = dateTime.year - 2000;
+    }
+    _buffer.add(tempBuffer);
     return this;
   }
 
   ByteArrayBuilder addTime(DateTime? dateTime) {
-    _buffer.add(
-      dateTime != null
-          ? [dateTime.hour, dateTime.minute, dateTime.second]
-          : [0, 0, 0],
-    );
+    Uint8List tempBuffer = Uint8List(kDateByteCount);
+    if (dateTime != null) {
+      tempBuffer[0] = dateTime.hour;
+      tempBuffer[1] = dateTime.minute;
+      tempBuffer[2] = dateTime.second;
+    }
+    _buffer.add(tempBuffer);
     return this;
   }
 
@@ -172,29 +187,5 @@ class ByteArrayBuilder {
   }
 
   void clear() => _buffer.clear();
-
   Uint8List build() => _buffer.toBytes();
-
-  static ByteArrayBuilder fromArray(Uint8List array) =>
-      ByteArrayBuilder().._buffer.add(array);
-}
-
-extension UtilsIntToByteExtension on int {
-  Uint8List toBytes([int? bytesCount]) {
-    bytesCount ??= kInt32ByteCount;
-    if (bytesCount > kInt64ByteCount) return Uint8List(0);
-    ByteData buffer = ByteData(kInt64ByteCount);
-    buffer.setUint64(0, this, Endian.big);
-    return buffer.buffer.asUint8List().sublist(kInt64ByteCount - bytesCount);
-  }
-
-  List<bool> toBits({int? bitsCount, int? bytesCount}) {
-    bitsCount ??= (bytesCount ?? kInt8ByteCount) * kByteBitCount;
-    final buffer = <bool>[];
-    for (int i = 0; i < bitsCount; i++) {
-      final position = Endian.host == Endian.little ? bitsCount - i - 1 : i;
-      buffer.add((this >> position) & 0x1 == 0x1);
-    }
-    return buffer;
-  }
 }

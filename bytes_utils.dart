@@ -16,15 +16,28 @@ const kIPv6ByteCount = 16;
 const kDateByteCount = 3;
 const kTimeByteCount = 3;
 
-const hexDecimal = 16;
+const hexDecimalBase = 16;
+const decimalBase    = 10;
 
-extension UtilsByteListExtension on Uint8List{
+extension UtilsByteListExtension on Uint8List {
   String toHexString({String divider = ""}) {
     final buffer = StringBuffer();
     for (final byte in this) {
       if (buffer.isNotEmpty) buffer.write(divider);
-      buffer.write(byte.toRadixString(hexDecimal).padLeft(2, '0'));
+      buffer.write(byte.toRadixString(hexDecimalBase).padLeft(2, '0'));
     }
     return buffer.toString().toUpperCase();
+  }
+}
+
+extension UtilsIntegerExtension on int {
+  List<bool> toBits({int? bitsCount, int? bytesCount}) {
+    bitsCount ??= (bytesCount ?? kInt8ByteCount) * kByteBitCount;
+    final buffer = <bool>[];
+    for (int i = 0; i < bitsCount; i++) {
+      final position = Endian.host == Endian.little ? bitsCount - i - 1 : i;
+      buffer.add((this >> position) & 0x1 == 0x1);
+    }
+    return buffer;
   }
 }
